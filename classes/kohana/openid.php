@@ -52,6 +52,17 @@
  */
 class Kohana_OpenID {
 
+	public static function factory($host = NULL)
+	{
+		if ( ! $host)
+		{
+			// Get the host from the base URL
+			$host = parse_url(URL::base(TRUE), PHP_URL_HOST);
+		}
+
+		return new OpenID($host);
+	}
+
 	public $returnUrl
 		 , $required = array()
 		 , $optional = array()
