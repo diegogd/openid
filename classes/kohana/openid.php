@@ -171,6 +171,55 @@ class Kohana_OpenID {
 		return !!gethostbynamel($server);
 	}
 
+	protected function request_kohana($url, $method='GET', $params=array(), $update_claimed_id)
+	{
+		// This whole method requires Kohana issues #4353, #4354 to be fixed:
+		// http://dev.kohanaframework.org/issues/4353
+		// http://dev.kohanaframework.org/issues/4354
+		//
+		// @TODO: Do not use this until the above issue is fixed!
+		//
+		throw new Exception('This method is not yet supported!');
+
+		$request = Request::factory($url)
+			->method($method)
+			->headers('Accept', 'application/xrds+xml, */*');
+
+		// @TODO: Support verify peer
+
+		if ($method === Request::POST) {
+			$request->post($params);
+		} else {
+			$request->query($params);
+		}
+
+		$response = $request->execute();
+
+		if ($response->status() == 405) {
+			$response = $request->method('GET')->execute();
+		}
+
+		if (in_array($request->method(), array(Request::GET, Request::HEAD))) {
+			if ($update_claimed_id) {
+				# Updating claimed_id in case of redirections.
+				// @TODO: This requires that Kohana issue #4354 is fixed
+				$effective_url = $response->url();
+				if ($effective_url != $url) {
+					$this->identity = $this->claimed_id = $effective_url;
+				}
+			}
+
+			if ($request->method() == Request::HEAD)
+			{
+				return $response->headers();
+			}
+
+			$this->headers = $response->headers();
+		}
+
+		return $response;
+	}
+
 	protected function request_curl($url, $method='GET', $params=array(), $update_claimed_id)
 	{
 		$params = http_build_query($params, '', '&');
@@ -371,6 +420,8 @@ class Kohana_OpenID {
 
 	protected function request($url, $method='GET', $params=array(), $update_claimed_id=false)
 	{
+		// Not supported, see comments in request_kohana() to more information
+		// return $this->request_kohana($url, $method, $params, $update_claimed_id);
 		if (function_exists('curl_init')
 			&& (!in_array('https', stream_get_wrappers()) || !ini_get('safe_mode') && !ini_get('open_basedir'))
 		) {
